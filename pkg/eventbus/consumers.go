@@ -2,7 +2,13 @@ package eventbus
 
 import "github.com/rabbitmq/amqp091-go"
 
-func CreateConsumer(queueName string, autoAck, exclusive, noWait bool, onDelivery func(d amqp091.Delivery)) error {
+type DeliveryFunc func(d amqp091.Delivery)
+
+func CreateConsumer(queueName string, autoAck, exclusive, noWait bool, onDelivery DeliveryFunc) error {
+	if err := ensureConnected(); err != nil {
+		return err
+	}
+
 	const noLocal = false // Not supported by RabbitMQ
 
 	delivery, err := currentChannel.Consume(queueName, "", autoAck, exclusive, noLocal, noWait, nil)
