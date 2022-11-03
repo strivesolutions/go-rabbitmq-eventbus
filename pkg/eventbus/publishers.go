@@ -8,6 +8,11 @@ import (
 	"github.com/rabbitmq/amqp091-go"
 )
 
+type DataRequestPayload struct {
+	CorrelationId string      `json:"correlationId"`
+	Data          interface{} `json:"data"`
+}
+
 func PublishJson(exchangeName ExchangeName, routingKey string, payload interface{}, publishTimeout time.Duration) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
