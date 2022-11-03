@@ -8,7 +8,7 @@ import (
 	"github.com/rabbitmq/amqp091-go"
 )
 
-func PublishJson(exchangeName, routingKey string, payload interface{}, publishTimeout time.Duration) error {
+func PublishJson(exchangeName ExchangeName, routingKey string, payload interface{}, publishTimeout time.Duration) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return err
@@ -17,7 +17,7 @@ func PublishJson(exchangeName, routingKey string, payload interface{}, publishTi
 	ctx, cancel := context.WithTimeout(context.Background(), publishTimeout)
 	defer cancel()
 
-	return currentChannel.PublishWithContext(ctx, exchangeName, routingKey, false, false, amqp091.Publishing{
+	return currentChannel.PublishWithContext(ctx, string(exchangeName), routingKey, false, false, amqp091.Publishing{
 		ContentType: "application/json",
 		Body:        body,
 	})
