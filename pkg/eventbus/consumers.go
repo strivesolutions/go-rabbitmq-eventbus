@@ -1,8 +1,6 @@
 package eventbus
 
 import (
-	"fmt"
-
 	"github.com/rabbitmq/amqp091-go"
 )
 
@@ -10,7 +8,6 @@ type DeliveryFunc func(d amqp091.Delivery)
 type OnConsumerCreatedFunc func(queueName QueueName)
 
 func CreateConsumer(
-	serviceName,
 	queueName QueueName,
 	autoAck, exclusive,
 	noWait bool,
@@ -21,11 +18,9 @@ func CreateConsumer(
 		return err
 	}
 
-	prefixedName := fmt.Sprintf("%s:%s", serviceName, queueName)
-
 	const noLocal = false // Not supported by RabbitMQ
 
-	delivery, err := currentChannel.Consume(prefixedName, "", autoAck, exclusive, noLocal, noWait, nil)
+	delivery, err := currentChannel.Consume(string(queueName), "", autoAck, exclusive, noLocal, noWait, nil)
 
 	if err != nil {
 		return err
