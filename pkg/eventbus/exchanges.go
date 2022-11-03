@@ -1,7 +1,5 @@
 package eventbus
 
-import "fmt"
-
 type ExchangeName string
 type ExchangeType string
 
@@ -12,12 +10,10 @@ const (
 	Headers ExchangeType = "headers"
 )
 
-func ConfigureExchange(serviceName, exchangeName ExchangeName, t ExchangeType, durable, autoDelete, internal, noWait bool) error {
+func ConfigureExchange(exchangeName ExchangeName, t ExchangeType, durable, autoDelete, internal, noWait bool) error {
 	if err := ensureConnected(); err != nil {
 		return err
 	}
 
-	prefixedName := fmt.Sprintf("%s:%s", serviceName, exchangeName)
-
-	return currentChannel.ExchangeDeclare(prefixedName, string(t), durable, autoDelete, internal, noWait, nil)
+	return currentChannel.ExchangeDeclare(string(exchangeName), string(t), durable, autoDelete, internal, noWait, nil)
 }
