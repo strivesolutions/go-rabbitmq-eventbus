@@ -13,6 +13,27 @@ type DataRequestPayload struct {
 	Data          map[string]interface{} `json:"data"`
 }
 
+/// Data must be serializable as json
+func CreateDataRequestPayload(correlationId string, data interface{}) (*DataRequestPayload, error) {
+	b, err := json.Marshal(data)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var m map[string]interface{}
+	err = json.Unmarshal(b, &m)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &DataRequestPayload{
+		CorrelationId: correlationId,
+		Data:          m,
+	}, nil
+}
+
 func ensureConnected() error {
 	if !IsConnected() {
 		// no loop here, only try to reconnect once when publishing
