@@ -9,8 +9,8 @@ import (
 )
 
 type DataRequestPayload struct {
-	CorrelationId string      `json:"correlationId"`
-	Data          interface{} `json:"data"`
+	CorrelationId string                 `json:"correlationId"`
+	Data          map[string]interface{} `json:"data"`
 }
 
 func ensureConnected() error {
