@@ -30,6 +30,10 @@ func statusString(isClosed bool) string {
 	}
 }
 
+func ConnectionError() chan error {
+	return connectionError
+}
+
 func Status() string {
 	if currentConnection == nil || currentChannel == nil {
 		return "not configured"
