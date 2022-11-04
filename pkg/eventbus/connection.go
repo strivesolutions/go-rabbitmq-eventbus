@@ -70,7 +70,7 @@ func loopUntilConnected() {
 	}
 }
 
-func Connect(connectionString string, eventBusOptions Options, customLogger *Logger) {
+func Connect(eventBusOptions Options, customLogger *Logger) {
 	options = &eventBusOptions
 
 	if customLogger != nil {
