@@ -11,5 +11,5 @@ const (
 )
 
 func ConfigureExchange(exchangeName ExchangeName, t ExchangeType, durable, autoDelete, internal, noWait bool) error {
-	return currentChannel.ExchangeDeclare(string(exchangeName), string(t), durable, autoDelete, internal, noWait, nil)
+	return channel.ExchangeDeclare(string(exchangeName), string(t), durable, autoDelete, internal, noWait, nil)
 }

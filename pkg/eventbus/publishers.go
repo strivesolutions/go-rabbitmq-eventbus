@@ -22,7 +22,7 @@ func PublishJson(exchangeName ExchangeName, routingKey string, payload interface
 	ctx, cancel := context.WithTimeout(context.Background(), publishTimeout)
 	defer cancel()
 
-	return currentChannel.PublishWithContext(ctx, string(exchangeName), routingKey, false, false, amqp091.Publishing{
+	return channel.PublishWithContext(ctx, string(exchangeName), routingKey, false, false, amqp091.Publishing{
 		ContentType: "application/json",
 		Body:        body,
 	})

@@ -1,47 +1,59 @@
 package eventbus
 
 import (
-	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-type ConfigureFunc func()
-type LogFunc func(msg string)
-type LogError func(err error)
-
-var currentConnectionString string
-var currentConnection *amqp.Connection
-var currentChannel *amqp.Channel
-var logger *loggingConfig
-var configure ConfigureFunc
-
-type loggingConfig struct {
+type Logger struct {
 	logInfo    LogFunc
 	logWarning LogFunc
 	logError   LogError
 }
 
+type Options struct {
+	// ConnectionString is required.
+	ConnectionString string
+
+	// OnConnectionEstablished is called after the event bus is connected or reconnected and may be nil.
+	OnConnectionEstablished OnConnectFunc
+}
+
+type OnConnectFunc func()
+type LogFunc func(msg string)
+type LogError func(err error)
+
+var connection *amqp.Connection
+var channel *amqp.Channel
+var options *Options
+
+var logger = Logger{
+	logInfo:    func(msg string) { log.Print(msg) },
+	logWarning: func(msg string) { log.Print(msg) },
+	logError:   func(err error) { log.Print(fmt.Sprint(err)) },
+}
+
 func connect() error {
-	if currentConnection != nil {
+	if connection != nil {
 		Dispose()
 	}
 
-	connection, err := amqp.Dial(currentConnectionString)
+	c, err := amqp.Dial(options.ConnectionString)
 	if err != nil {
 		return err
 	}
 
-	currentConnection = connection
+	connection = c
 
-	channel, err := connection.Channel()
+	ch, err := c.Channel()
 	if err != nil {
 		return err
 	}
 
-	currentChannel = channel
+	channel = ch
 
 	return nil
 }
@@ -58,20 +70,20 @@ func loopUntilConnected() {
 	}
 }
 
-func Connect2(connectionString string, logInfo, logWarning LogFunc, logError LogError, configureCallback func()) {
-	currentConnectionString = connectionString
-	configure = configureCallback
+func Connect(connectionString string, eventBusOptions Options, customLogger *Logger) {
+	options = &eventBusOptions
 
-	logger = &loggingConfig{
-		logInfo:    logInfo,
-		logWarning: logWarning,
-		logError:   logError,
+	if customLogger != nil {
+		logger = *customLogger
 	}
 
 	logger.logInfo("Event bus: connecting...")
 	loopUntilConnected()
 	logger.logInfo("Event bus: connected!")
-	configure()
+
+	if options.OnConnectionEstablished != nil {
+		options.OnConnectionEstablished()
+	}
 
 	go keepAlive()
 }
@@ -90,44 +102,18 @@ func Reconnect() {
 	logger.logWarning("Event bus: reconnecting...")
 	loopUntilConnected()
 	logger.logInfo("Event bus: reconnected!")
-	configure()
-}
 
-/// To do: remove
-func Connect(connectionString string) error {
-	if currentConnection != nil {
-		Dispose()
+	if options.OnConnectionEstablished != nil {
+		options.OnConnectionEstablished()
 	}
-
-	if connectionString == "" {
-		return errors.New("connection string is empty")
-	}
-
-	currentConnectionString = connectionString
-
-	connection, err := amqp.Dial(connectionString)
-	if err != nil {
-		return err
-	}
-
-	currentConnection = connection
-
-	channel, err := connection.Channel()
-	if err != nil {
-		return err
-	}
-
-	currentChannel = channel
-
-	return nil
 }
 
 func Dispose() {
-	if currentChannel != nil {
-		currentChannel.Close()
+	if channel != nil {
+		channel.Close()
 	}
 
-	if currentConnection != nil {
-		currentConnection.Close()
+	if connection != nil {
+		connection.Close()
 	}
 }

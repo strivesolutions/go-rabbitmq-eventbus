@@ -16,7 +16,7 @@ func CreateConsumer(
 ) error {
 	const noLocal = false // Not supported by RabbitMQ
 
-	delivery, err := currentChannel.Consume(string(queueName), "", autoAck, exclusive, noLocal, noWait, nil)
+	delivery, err := channel.Consume(string(queueName), "", autoAck, exclusive, noLocal, noWait, nil)
 
 	if err != nil {
 		return err
