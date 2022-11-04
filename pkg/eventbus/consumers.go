@@ -40,13 +40,12 @@ func (m Message) Reject(requeue bool) error {
 	}
 
 	count := requeues[m.queue]
-	count++
 
 	if count <= MaxRequeueCount {
 		delay := time.Millisecond * time.Duration(count*100)
 		logger.Warning(fmt.Sprintf("Requeuing message from %s in %s", m.queue, delay))
 		time.Sleep(delay)
-		requeues[m.queue] = count
+		requeues[m.queue] = count + 1
 		return m.delivery.Reject(true)
 	} else {
 		logger.Error(fmt.Errorf("Message from %s has exceeded max requeue count (%d) and will be rejected permanently", m.queue, MaxRequeueCount))
