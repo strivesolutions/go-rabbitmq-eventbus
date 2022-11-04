@@ -1,6 +1,7 @@
 package eventbus
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -55,12 +56,12 @@ func loopUntilConnected() {
 	}
 }
 
-func Connect(eventBusOptions Options, customLogger *Logger) {
-	options = &eventBusOptions
-
-	if customLogger != nil {
-		logger = *customLogger
+func Connect(eventBusOptions Options) error {
+	if eventBusOptions.ConnectionString == "" {
+		return errors.New("connection string is required")
 	}
+
+	options = &eventBusOptions
 
 	logger.Info("Event bus: connecting...")
 	loopUntilConnected()
@@ -71,6 +72,8 @@ func Connect(eventBusOptions Options, customLogger *Logger) {
 	}
 
 	go keepAlive()
+
+	return nil
 }
 
 func keepAlive() {
