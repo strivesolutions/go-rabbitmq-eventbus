@@ -3,6 +3,7 @@ package eventbus
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/rabbitmq/amqp091-go"
@@ -11,6 +12,28 @@ import (
 type DataRequestPayload struct {
 	CorrelationId string      `json:"correlationId"`
 	Data          interface{} `json:"data"`
+}
+
+func TryParseDataPayload[T ~map[string]interface{}](m Message) (string, T, error) {
+	var payload DataRequestPayload
+	err := m.Json(&payload)
+
+	if err != nil {
+		return "", nil, err
+	}
+
+	if payload.Data == nil {
+		return payload.CorrelationId, nil, nil
+	}
+
+	data, ok := payload.Data.(map[string]interface{})
+
+	if !ok {
+		return payload.CorrelationId, nil, errors.New("data is not a json map")
+	}
+
+	return payload.CorrelationId, data, nil
+
 }
 
 func ensureConnected() error {
