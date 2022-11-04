@@ -13,9 +13,23 @@ type DataRequestPayload struct {
 	Data          interface{} `json:"data"`
 }
 
+func ensureConnected() error {
+	if !IsConnected() {
+		// no loop here, only try to reconnect once when publishing
+		if err := Reconnect(true); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func PublishJson(exchangeName ExchangeName, routingKey string, payload interface{}, publishTimeout time.Duration) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
+		return err
+	}
+
+	if err := ensureConnected(); err != nil {
 		return err
 	}
 

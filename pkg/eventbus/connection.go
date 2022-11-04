@@ -79,21 +79,29 @@ func Connect(eventBusOptions Options) error {
 func keepAlive() {
 	for {
 		if !IsConnected() {
-			logger.Warning("Event bus: connection to was lost!")
-			Reconnect()
+			logger.Warning("Event bus: connection was lost!")
+			Reconnect(false)
 		}
 		time.Sleep(time.Second * 5)
 	}
 }
 
-func Reconnect() {
+func Reconnect(once bool) error {
 	logger.Warning("Event bus: reconnecting...")
-	loopUntilConnected()
+
+	if once {
+		return connect()
+	} else {
+		loopUntilConnected()
+	}
+
 	logger.Info("Event bus: reconnected!")
 
 	if options.OnConnectionEstablished != nil {
 		options.OnConnectionEstablished()
 	}
+
+	return nil
 }
 
 func Dispose() {
