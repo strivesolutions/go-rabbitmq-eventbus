@@ -11,9 +11,5 @@ const (
 )
 
 func ConfigureExchange(exchangeName ExchangeName, t ExchangeType, durable, autoDelete, internal, noWait bool) error {
-	if err := ensureConnected(); err != nil {
-		return err
-	}
-
 	return currentChannel.ExchangeDeclare(string(exchangeName), string(t), durable, autoDelete, internal, noWait, nil)
 }

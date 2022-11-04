@@ -14,10 +14,6 @@ func CreateConsumer(
 	onDelivery DeliveryFunc,
 	onConsumerCreated OnConsumerCreatedFunc,
 ) error {
-	if err := ensureConnected(); err != nil {
-		return err
-	}
-
 	const noLocal = false // Not supported by RabbitMQ
 
 	delivery, err := currentChannel.Consume(string(queueName), "", autoAck, exclusive, noLocal, noWait, nil)

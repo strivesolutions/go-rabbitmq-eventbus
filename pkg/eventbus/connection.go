@@ -3,68 +3,97 @@ package eventbus
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-type OnConnectedFunc func()
+type ConfigureFunc func()
 type LogFunc func(msg string)
+type LogError func(err error)
 
 var currentConnectionString string
 var currentConnection *amqp.Connection
 var currentChannel *amqp.Channel
+var logger *loggingConfig
+var configure ConfigureFunc
 
-// var connectionError chan error
+type loggingConfig struct {
+	logInfo    LogFunc
+	logWarning LogFunc
+	logError   LogError
+}
 
-func ensureConnected() error {
-	if currentConnection == nil || currentChannel == nil {
-		return Connect(currentConnectionString)
+func connect() error {
+	if currentConnection != nil {
+		Dispose()
 	}
+
+	connection, err := amqp.Dial(currentConnectionString)
+	if err != nil {
+		return err
+	}
+
+	currentConnection = connection
+
+	channel, err := connection.Channel()
+	if err != nil {
+		return err
+	}
+
+	currentChannel = channel
+
 	return nil
 }
 
-func statusString(isClosed bool) string {
-	if isClosed {
-		return "closed"
-	} else {
-		return "open"
+func loopUntilConnected() {
+	err := connect()
+
+	if err != nil {
+		retryTime := time.Second * 2
+		logger.logWarning(fmt.Sprintf("Failed to connect to event bus, will try again in %s", retryTime))
+		logger.logError(err)
+		time.Sleep(retryTime)
+		loopUntilConnected()
 	}
 }
 
-// func ConnectionError() chan error {
-// 	return connectionError
-// }
+func Connect2(connectionString string, logInfo, logWarning LogFunc, logError LogError, configureCallback func()) {
+	currentConnectionString = connectionString
+	configure = configureCallback
 
-func IsConnected() bool {
-	return currentConnection != nil && currentChannel != nil && !currentConnection.IsClosed() && !currentChannel.IsClosed()
-}
-
-func StatusText() string {
-	if currentConnection == nil || currentChannel == nil {
-		return "not configured"
+	logger = &loggingConfig{
+		logInfo:    logInfo,
+		logWarning: logWarning,
+		logError:   logError,
 	}
 
-	return fmt.Sprintf("Connection: %s\t Channel: %s", statusString(currentConnection.IsClosed()), statusString(currentChannel.IsClosed()))
+	logger.logInfo("Event bus: connecting...")
+	loopUntilConnected()
+	logger.logInfo("Event bus: connected!")
+	configure()
+
+	go keepAlive()
 }
 
-// func establishConnection(connectionString string, retryTime time.Duration, infoLog, warnLog, errorLog LogFunc) {
-// 	infoLog("Estabilishing connection to event bus")
-// 	err := Connect(connectionString)
+func keepAlive() {
+	for {
+		if !IsConnected() {
+			logger.logWarning("Event bus: connection to was lost!")
+			Reconnect()
+		}
+		time.Sleep(time.Second * 5)
+	}
+}
 
-// 	if err != nil {
-// 		warnLog(fmt.Sprintf("Failed to connect to event bus, will try again in %s", retryTime))
-// 		errorLog(fmt.Sprint(err))
-// 		time.Sleep(retryTime)
-// 		establishConnection(connectionString, retryTime, infoLog, warnLog, errorLog)
-// 	}
-// }
+func Reconnect() {
+	logger.logWarning("Event bus: reconnecting...")
+	loopUntilConnected()
+	logger.logInfo("Event bus: reconnected!")
+	configure()
+}
 
-// func Connect2(connectionString string, retryTime time.Duration, infoLog, warnLog, errorLog LogFunc, onConnected OnConnectedFunc) {
-// 	establishConnection(connectionString, retryTime, infoLog, warnLog, errorLog)
-// 	onConnected()
-// 	return nil
-// }
-
+/// To do: remove
 func Connect(connectionString string) error {
 	if currentConnection != nil {
 		Dispose()
@@ -82,11 +111,6 @@ func Connect(connectionString string) error {
 	}
 
 	currentConnection = connection
-
-	// go func() {
-	// 	<-currentConnection.NotifyClose(make(chan *amqp.Error))
-	// 	connectionError <- errors.New(("connection closed"))
-	// }()
 
 	channel, err := connection.Channel()
 	if err != nil {
