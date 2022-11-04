@@ -11,7 +11,6 @@ import (
 var MaxRequeueCount = 3
 var requeues = make(map[string]int)
 
-type DeliveryFunc func(d amqp091.Delivery)
 type MessageFunc func(m Message)
 type OnConsumerCreatedFunc func(queueName QueueName)
 
@@ -33,12 +32,7 @@ func (m Message) Ack() error {
 	return m.delivery.Ack(false)
 }
 
-func (m Message) Reject(requeue bool) error {
-	if !requeue {
-		requeues[m.queue] = 0
-		return m.delivery.Reject(false)
-	}
-
+func (m Message) Retry() error {
 	count := requeues[m.queue]
 
 	if count <= MaxRequeueCount {
@@ -54,37 +48,13 @@ func (m Message) Reject(requeue bool) error {
 	}
 }
 
-func CreateConsumer(
-	queueName QueueName,
-	autoAck, exclusive,
-	noWait bool,
-	onDelivery DeliveryFunc,
-	onConsumerCreated OnConsumerCreatedFunc,
-) error {
-	const noLocal = false // Not supported by RabbitMQ
+func (m Message) Abort() error {
+	requeues[m.queue] = 0
+	return m.delivery.Reject(false)
 
-	delivery, err := channel.Consume(string(queueName), "", autoAck, exclusive, noLocal, noWait, nil)
-
-	if err != nil {
-		return err
-	}
-
-	if onConsumerCreated != nil {
-		onConsumerCreated(queueName)
-	}
-
-	var forever chan struct{}
-	go func() {
-		for x := range delivery {
-			onDelivery(x)
-		}
-	}()
-	<-forever
-
-	return nil
 }
 
-func CreateConsumer2(
+func CreateConsumer(
 	queueName QueueName,
 	autoAck, exclusive,
 	noWait bool,
