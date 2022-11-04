@@ -13,7 +13,8 @@ type LogFunc func(msg string)
 var currentConnectionString string
 var currentConnection *amqp.Connection
 var currentChannel *amqp.Channel
-var connectionError chan error
+
+// var connectionError chan error
 
 func ensureConnected() error {
 	if currentConnection == nil || currentChannel == nil {
@@ -30,11 +31,15 @@ func statusString(isClosed bool) string {
 	}
 }
 
-func ConnectionError() chan error {
-	return connectionError
+// func ConnectionError() chan error {
+// 	return connectionError
+// }
+
+func IsConnected() bool {
+	return currentConnection != nil && currentChannel != nil && !currentConnection.IsClosed() && !currentChannel.IsClosed()
 }
 
-func Status() string {
+func StatusText() string {
 	if currentConnection == nil || currentChannel == nil {
 		return "not configured"
 	}
@@ -78,10 +83,10 @@ func Connect(connectionString string) error {
 
 	currentConnection = connection
 
-	go func() {
-		<-currentConnection.NotifyClose(make(chan *amqp.Error))
-		connectionError <- errors.New(("connection closed"))
-	}()
+	// go func() {
+	// 	<-currentConnection.NotifyClose(make(chan *amqp.Error))
+	// 	connectionError <- errors.New(("connection closed"))
+	// }()
 
 	channel, err := connection.Channel()
 	if err != nil {
